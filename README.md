@@ -135,6 +135,147 @@ The diver's movement is based on a physics-driven system:
 5. Create level boundaries
 6. Design the procedural map generation system
 
+## Procedural Map Generation
+
+### 1. Set Up the Generator
+
+1. Create an empty GameObject in your scene named "MapGenerator"
+2. Add the ProceduralMapGenerator script component
+3. Configure the generation settings:
+   ```csharp
+   Generation Settings:
+   - Active Chunks: Number of chunks to keep loaded (default: 5)
+   - Chunk Size: Size of each chunk in units (default: 20)
+   - Depth Increment: Vertical distance between chunks (default: 10)
+
+   Terrain Settings:
+   - Terrain Prefabs: Array of terrain feature prefabs
+   - Obstacle Prefabs: Array of obstacle prefabs
+   - Collectible Prefabs: Array of collectible prefabs
+
+   Spawn Settings:
+   - Obstacle Spawn Chance: Probability of spawning obstacles (0-1)
+   - Collectible Spawn Chance: Probability of spawning collectibles (0-1)
+   - Spawn Grid Size: Grid divisions for spawn points (default: 4x4)
+   ```
+
+### 2. Create Prefabs
+
+1. Terrain Features:
+   - Create various rock formations, coral, seaweed
+   - Add appropriate colliders
+   - Tag as "Terrain"
+   - Add to the Terrain Prefabs array
+
+2. Obstacles:
+   - Create hazards like spikes, mines, moving creatures
+   - Add trigger colliders
+   - Tag as "Obstacle"
+   - Add to the Obstacle Prefabs array
+
+3. Collectibles:
+   - Create collectible items (treasures, power-ups)
+   - Add the Collectible script
+   - Configure collectible settings:
+     ```csharp
+     Settings:
+     - Point Value: Score awarded
+     - Bob Speed: Float animation speed
+     - Bob Amount: Float animation distance
+     - Rotation Speed: Spin animation speed
+
+     Effects:
+     - Collect Effect: Particle system prefab
+     - Collect Sound: Audio clip to play
+     ```
+   - Add trigger collider
+   - Tag as "Collectible"
+   - Add to the Collectible Prefabs array
+
+### 3. Configure Player
+
+1. Add the "Player" tag to your Diver GameObject
+2. Assign the Diver to the Player reference in ProceduralMapGenerator
+3. Ensure the Diver has appropriate collision/trigger setup
+
+### 4. Chunk Management
+
+The system automatically manages chunks based on the player's position:
+- Creates new chunks as the player descends
+- Removes chunks that are too far above
+- Maintains a constant number of active chunks
+- Uses object pooling for better performance
+
+### 5. Generation Features
+
+1. Terrain Generation:
+   - Uses Perlin noise for natural variation
+   - Randomly rotates and scales terrain
+   - Ensures consistent but varied generation
+
+2. Spawn System:
+   - Grid-based spawn points
+   - Random offset for natural placement
+   - Prevents overlap of obstacles and collectibles
+   - Maintains balanced distribution
+
+3. Visual Debugging:
+   - Green wireframe shows chunk boundaries
+   - Visible in Scene view when selected
+   - Helps with level design and testing
+
+## Tips for Map Generation
+
+1. Terrain Design:
+   - Create varied terrain prefabs
+   - Use different scales and shapes
+   - Consider visual themes for depth progression
+   - Ensure proper collision setup
+
+2. Obstacle Placement:
+   - Balance obstacle density
+   - Create patterns that are challenging but fair
+   - Consider the diver's movement capabilities
+   - Test different spawn chances
+
+3. Collectible Distribution:
+   - Place collectibles in risk/reward positions
+   - Create interesting paths through obstacles
+   - Use collectibles to guide player movement
+   - Balance point values with difficulty
+
+4. Performance Optimization:
+   - Keep prefabs simple and optimized
+   - Use appropriate collider types
+   - Consider using object pooling for frequent spawns
+   - Monitor frame rate with many objects
+
+## Troubleshooting Generation
+
+1. If chunks aren't generating:
+   - Check the Player reference is set
+   - Verify Active Chunks value is appropriate
+   - Ensure Depth Increment matches your scale
+   - Check for errors in the console
+
+2. If objects overlap incorrectly:
+   - Adjust the Chunk Size
+   - Modify the Spawn Grid Size
+   - Check collider setups
+   - Verify prefab scales
+
+3. If performance is poor:
+   - Reduce Active Chunks
+   - Simplify prefab geometry
+   - Lower spawn chances
+   - Optimize collider usage
+
+4. If generation feels too repetitive:
+   - Add more prefab variations
+   - Adjust Perlin noise scale
+   - Increase spawn point randomization
+   - Vary the spawn patterns
+
 ## Troubleshooting
 
 1. If the diver moves too fast/slow:
