@@ -63,6 +63,39 @@ Adjust these values to fine-tune the movement feel.
    - Set Distance for the light reach
    - Choose a suitable color (warm white recommended)
 
+### 5. Set Up Camera Following
+
+1. Select the Main Camera in your scene
+2. Add the CameraFollow script component
+3. Configure the camera settings:
+   ```csharp
+   Target Settings:
+   - Target: Assign your Diver GameObject
+   - Offset: Default (0, 0, -10) for 2D games
+   
+   Follow Settings:
+   - Smooth Speed: How quickly camera follows (default: 3)
+   - Look Ahead Factor: Camera anticipation of movement (default: 0.5)
+   - Max Follow Distance: Snap distance if too far (default: 5)
+   
+   Depth Settings:
+   - Follow Vertical: Enable/disable vertical following
+   - Min Y: Lowest point camera can reach (depth limit)
+   - Max Y: Highest point camera can reach (surface limit)
+   ```
+4. Adjust the Camera's properties:
+   - Set Projection to "Orthographic"
+   - Adjust Size for desired view area (recommended: 5-8)
+   - Clear Flags: Solid Color (for underwater effect)
+   - Background: Deep blue or black
+
+The camera system features:
+- Smooth follow movement using SmoothDamp
+- Look-ahead system based on diver's velocity
+- Vertical movement constraints for level boundaries
+- Maximum follow distance to prevent losing the player
+- Editor visualization of boundaries and follow range
+
 ## Controls
 
 - Left Mouse Button: Activates left flipper
@@ -90,16 +123,17 @@ The diver's movement is based on a physics-driven system:
 3. Adjust the forces and drag values based on your game's needs
 4. Use the Scene view gizmo (blue line) to visualize the diver's orientation
 5. Consider the camera follow speed when testing movement
+6. Use the camera gizmos to visualize follow boundaries
+7. Test camera behavior with rapid movement changes
 
 ## Next Steps
 
-1. Implement camera following
-2. Add underwater particle effects
-3. Create obstacles and collectibles
-4. Implement the sonar mechanic
-5. Add sound effects for movement
-6. Create level boundaries
-7. Design the procedural map generation system
+1. Add underwater particle effects
+2. Create obstacles and collectibles
+3. Implement the sonar mechanic
+4. Add sound effects for movement
+5. Create level boundaries
+6. Design the procedural map generation system
 
 ## Troubleshooting
 
@@ -120,4 +154,10 @@ The diver's movement is based on a physics-driven system:
 4. If movement feels unresponsive:
    - Check if the Rigidbody2D settings are correct
    - Verify the collider size matches your sprite
-   - Ensure no other scripts are interfering with the physics 
+   - Ensure no other scripts are interfering with the physics
+
+5. If camera following feels off:
+   - Adjust the Smooth Speed for faster/slower following
+   - Modify the Look Ahead Factor for better anticipation
+   - Check if the Max Follow Distance is appropriate
+   - Verify the camera offset is set correctly 
