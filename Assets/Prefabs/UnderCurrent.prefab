@@ -146,6 +146,10 @@ MonoBehaviour:
   currentForce: 8
   maxForce: 12
   currentDirection: 1
+  activeTime: 3
+  inactiveTime: 2
+  rotationInterval: 5
+  rotationAmount: 45
   currentEffect: {fileID: 0}
   currentLight: {fileID: 0}
   currentLightColor: {r: 0.2, g: 0.5, b: 1, a: 1}
