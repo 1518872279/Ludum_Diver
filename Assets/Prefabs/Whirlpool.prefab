@@ -13,7 +13,7 @@ GameObject:
   - component: {fileID: 225311130111540124}
   - component: {fileID: 4952786991637764907}
   - component: {fileID: 4673755155725974931}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Whirlpool
   m_TagString: Untagged
   m_Icon: {fileID: 0}

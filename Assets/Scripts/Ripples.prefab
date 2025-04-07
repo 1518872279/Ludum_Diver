@@ -99,7 +99,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   duration: 2
   initialScale: 0.1
-  maxScale: 2
+  maxScale: 0.5
   rippleColor: {r: 0, g: 1, b: 1, a: 0.5}
   rippleSprite: {fileID: 0}
   rippleLight: {fileID: 0}

@@ -13,7 +13,7 @@ GameObject:
   - component: {fileID: 630420009605635364}
   - component: {fileID: 2735442499059191811}
   - component: {fileID: 5672800663971581035}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: SharkEnemy
   m_TagString: Untagged
   m_Icon: {fileID: 0}
