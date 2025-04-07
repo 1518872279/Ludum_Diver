@@ -34,7 +34,6 @@ public class ExitZone : MonoBehaviour
     public float exitVolume = 0.5f;
     
     private AudioSource audioSource;
-    private bool isPlayerInZone = false;
     private bool hasExited = false;
     private BoxCollider2D exitCollider;
     private DiverMovement playerDiver;
@@ -70,7 +69,6 @@ public class ExitZone : MonoBehaviour
     {
         if (other.CompareTag("Player") && !hasExited)
         {
-            isPlayerInZone = true;
             playerDiver = other.GetComponent<DiverMovement>();
             
             // Play exit sound
@@ -99,7 +97,6 @@ public class ExitZone : MonoBehaviour
     {
         if (other.CompareTag("Player"))
         {
-            isPlayerInZone = false;
             playerDiver = null;
             
             // Reset exit effect
