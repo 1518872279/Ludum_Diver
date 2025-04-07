@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.Rendering.Universal;
+using System.Collections;
 
 public class UndercurrentTrap : MonoBehaviour
 {
@@ -12,6 +13,19 @@ public class UndercurrentTrap : MonoBehaviour
     
     [Tooltip("Direction of the undercurrent (in degrees)")]
     public float currentDirection = 0f;
+    
+    [Header("Timing Settings")]
+    [Tooltip("Time the undercurrent is active")]
+    public float activeTime = 3f;
+    
+    [Tooltip("Time the undercurrent is inactive")]
+    public float inactiveTime = 2f;
+    
+    [Tooltip("Time to rotate the undercurrent direction")]
+    public float rotationInterval = 5f;
+    
+    [Tooltip("Amount to rotate in degrees")]
+    public float rotationAmount = 45f;
     
     [Header("Visual Effects")]
     [Tooltip("Particle system for the undercurrent effect")]
@@ -36,12 +50,14 @@ public class UndercurrentTrap : MonoBehaviour
     private bool isPlayerInTrap = false;
     private DiverMovement playerDiver;
     private BoxCollider2D currentCollider;
+    private bool isActive = true;
+    private Coroutine activationCoroutine;
+    private Coroutine rotationCoroutine;
 
     private void Start()
     {
         // Calculate the current vector based on direction
-        float angleInRadians = currentDirection * Mathf.Deg2Rad;
-        currentVector = new Vector2(Mathf.Cos(angleInRadians), Mathf.Sin(angleInRadians));
+        UpdateCurrentVector();
         
         // Get or add components
         audioSource = GetComponent<AudioSource>();
@@ -74,6 +90,77 @@ public class UndercurrentTrap : MonoBehaviour
         if (currentEffect != null) {
             currentEffect.Play();
         }
+        
+        // Start the activation cycle
+        activationCoroutine = StartCoroutine(ActivationCycle());
+        
+        // Start the rotation cycle
+        rotationCoroutine = StartCoroutine(RotationCycle());
+    }
+    
+    private void UpdateCurrentVector()
+    {
+        float angleInRadians = currentDirection * Mathf.Deg2Rad;
+        currentVector = new Vector2(Mathf.Cos(angleInRadians), Mathf.Sin(angleInRadians));
+    }
+    
+    private IEnumerator ActivationCycle()
+    {
+        while (true)
+        {
+            // Active phase
+            isActive = true;
+            SetVisualEffects(true);
+            yield return new WaitForSeconds(activeTime);
+            
+            // Inactive phase
+            isActive = false;
+            SetVisualEffects(false);
+            yield return new WaitForSeconds(inactiveTime);
+        }
+    }
+    
+    private IEnumerator RotationCycle()
+    {
+        while (true)
+        {
+            yield return new WaitForSeconds(rotationInterval);
+            
+            // Rotate the direction
+            currentDirection += rotationAmount;
+            if (currentDirection >= 360f)
+            {
+                currentDirection -= 360f;
+            }
+            
+            UpdateCurrentVector();
+            Debug.Log("Undercurrent rotated to: " + currentDirection + " degrees");
+        }
+    }
+    
+    private void SetVisualEffects(bool active)
+    {
+        if (currentEffect != null)
+        {
+            if (active)
+            {
+                currentEffect.Play();
+            }
+            else
+            {
+                currentEffect.Stop();
+            }
+        }
+        
+        if (currentLight != null)
+        {
+            currentLight.enabled = active;
+        }
+        
+        if (audioSource != null)
+        {
+            audioSource.volume = active ? ambientVolume : 0f;
+        }
     }
     
     private void OnTriggerEnter2D(Collider2D other)
@@ -84,7 +171,7 @@ public class UndercurrentTrap : MonoBehaviour
             playerDiver = other.GetComponent<DiverMovement>();
             
             // Increase current effect when player enters
-            if (currentEffect != null) {
+            if (currentEffect != null && isActive) {
                 var emission = currentEffect.emission;
                 emission.rateOverTime = emission.rateOverTime.constant * 2;
             }
@@ -112,7 +199,7 @@ public class UndercurrentTrap : MonoBehaviour
     
     private void OnTriggerStay2D(Collider2D other)
     {
-        if (other.CompareTag("Player") && isPlayerInTrap)
+        if (other.CompareTag("Player") && isPlayerInTrap && isActive)
         {
             Rigidbody2D rb = other.GetComponent<Rigidbody2D>();
             if (rb != null)
@@ -152,5 +239,22 @@ public class UndercurrentTrap : MonoBehaviour
         float angleInRadians = currentDirection * Mathf.Deg2Rad;
         Vector2 direction = new Vector2(Mathf.Cos(angleInRadians), Mathf.Sin(angleInRadians));
         Gizmos.DrawRay(transform.position, direction * currentForce * 0.5f);
+    }
+    
+    private void OnDisable()
+    {
+        // Stop all coroutines when disabled
+        if (activationCoroutine != null)
+        {
+            StopCoroutine(activationCoroutine);
+        }
+        
+        if (rotationCoroutine != null)
+        {
+            StopCoroutine(rotationCoroutine);
+        }
+        
+        // Reset visual effects
+        SetVisualEffects(false);
     }
 } 
