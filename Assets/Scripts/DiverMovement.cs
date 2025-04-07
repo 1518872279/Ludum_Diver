@@ -64,6 +64,13 @@ public class DiverMovement : MonoBehaviour
     [Tooltip("Sound when dying")]
     public AudioClip deathSound;
     
+    [Header("Checkpoint Settings")]
+    [Tooltip("Whether to use the checkpoint system for respawning")]
+    public bool useCheckpointSystem = true;
+    
+    [Tooltip("Delay before respawning at checkpoint (in seconds)")]
+    public float respawnDelay = 3f;
+    
     private Rigidbody2D rb;
     private bool isLeftFlipperActive;
     private bool isRightFlipperActive;
@@ -117,6 +124,13 @@ public class DiverMovement : MonoBehaviour
         // Initialize flipper states
         wasLeftFlipperActive = false;
         wasRightFlipperActive = false;
+        
+        // Check if we should spawn at a checkpoint
+        if (useCheckpointSystem && GameManager.Instance != null && GameManager.Instance.HasCheckpoint())
+        {
+            // Position will be set by GameManager during respawn
+            Debug.Log("Player will spawn at checkpoint: " + GameManager.Instance.GetCheckpointPosition());
+        }
     }
 
     private void Update()
@@ -339,8 +353,69 @@ public class DiverMovement : MonoBehaviour
             diverAnimator.SetBool(bothFeetParam, false);
         }
         
-        // Reload scene after delay
-        Invoke("ReloadScene", 3f);
+        // Use checkpoint system if enabled
+        if (useCheckpointSystem && GameManager.Instance != null)
+        {
+            // Respawn at checkpoint after delay
+            Invoke("RespawnAtCheckpoint", respawnDelay);
+        }
+        else
+        {
+            // Reload scene after delay
+            Invoke("ReloadScene", respawnDelay);
+        }
+    }
+    
+    // Respawn at the current checkpoint
+    private void RespawnAtCheckpoint()
+    {
+        if (GameManager.Instance != null)
+        {
+            GameManager.Instance.RespawnPlayer(gameObject);
+        }
+        else
+        {
+            Debug.LogError("GameManager instance not found! Reloading scene instead.");
+            ReloadScene();
+        }
+    }
+    
+    // Reset the player's state (called by GameManager during respawn)
+    public void ResetPlayer()
+    {
+        // Reset health
+        currentHealth = maxHealth;
+        
+        // Reset state variables
+        isDead = false;
+        isInvulnerable = false;
+        invulnerabilityTimer = 0f;
+        
+        // Reset sprite color
+        if (spriteRenderer != null) {
+            spriteRenderer.color = Color.white;
+        }
+        
+        // Reset light
+        if (diverLight != null) {
+            diverLight.intensity = 1f;
+            diverLight.color = Color.white;
+        }
+        
+        // Re-enable colliders
+        Collider2D[] colliders = GetComponents<Collider2D>();
+        foreach (Collider2D collider in colliders) {
+            collider.enabled = true;
+        }
+        
+        // Reset animations
+        if (diverAnimator != null) {
+            diverAnimator.SetBool(leftFootParam, false);
+            diverAnimator.SetBool(rightFootParam, false);
+            diverAnimator.SetBool(bothFeetParam, false);
+        }
+        
+        Debug.Log("Player reset at checkpoint");
     }
     
     // Reload the current scene
