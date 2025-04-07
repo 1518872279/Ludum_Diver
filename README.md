@@ -469,4 +469,89 @@ The CavernGenerator includes visual debugging tools:
    - Increase the chance of exit rooms
    - Add visual indicators for exit direction
    - Ensure exit rooms are visually distinct
-   - Consider adding a minimap or compass 
+   - Consider adding a minimap or compass
+
+## Enemy System
+
+The game features two types of enemies: Sharks and Jellyfish, each with unique behaviors and attack patterns.
+
+### Shark Enemy Setup
+1. Create a new GameObject and name it "Shark"
+2. Add the following components:
+   - Sprite Renderer
+   - Rigidbody2D (set to Dynamic)
+   - Circle Collider 2D
+   - SharkEnemy script
+3. Configure the SharkEnemy settings:
+   - Detection Settings (chase range and return delay)
+   - Movement Settings (speed and steering)
+   - Patrol Settings (waypoints and wait times)
+   - Visual Effects (particle systems and light)
+   - Audio (detection and attack sounds)
+4. Set up patrol waypoints:
+   - Create empty GameObjects as child objects
+   - Position them to form a patrol path
+   - Assign them to the patrolNodes list
+
+### Jellyfish Enemy Setup
+1. Create a new GameObject and name it "Jellyfish"
+2. Add the following components:
+   - Sprite Renderer
+   - Rigidbody2D (set to Dynamic)
+   - Circle Collider 2D (set to Trigger)
+   - JellyfishEnemy script
+3. Configure the JellyfishEnemy settings:
+   - Detection Settings (range and return delay)
+   - Movement Settings (speed and steering)
+   - Attack Settings (duration and cooldown)
+   - Visual Effects (particle systems and light)
+   - Audio (detection and attack sounds)
+
+### Enemy Behavior
+- **Sharks**:
+  - Patrol between waypoints when player is out of range
+  - Chase player when within detection range
+  - Instant kill on contact
+  - Visual and audio feedback when detecting player
+- **Jellyfish**:
+  - Move randomly when idle
+  - Attack player when within range
+  - Deal damage over time on contact
+  - Visual and audio feedback for state changes
+
+### Enemy Placement
+1. Place enemies in strategic locations:
+   - Sharks: Along patrol routes in open areas
+   - Jellyfish: Near obstacles or in tight spaces
+2. Adjust detection ranges and movement speeds for balanced gameplay
+3. Test enemy behavior and adjust settings as needed
+
+## Troubleshooting
+
+### Common Issues
+1. **Diver Movement**
+   - If movement feels too slow/fast, adjust the force and velocity settings
+   - If rotation is too sensitive, reduce the torque force
+   - If sinking too quickly, increase the water drag
+
+2. **Camera Issues**
+   - If camera movement is jerky, increase the smooth speed
+   - If camera gets stuck, check the Y position limits
+   - If camera loses track of player, verify the target assignment
+
+3. **Map Generation**
+   - If chunks don't generate properly, check the chunk size and active chunks settings
+   - If objects overlap, adjust the spawn grid size
+   - If generation is too slow, reduce the number of active chunks
+
+4. **Enemy Behavior**
+   - If enemies are too aggressive, reduce their detection range or speed
+   - If enemies get stuck, check their collider settings
+   - If enemies don't detect the player, verify the player tag is set to "Player"
+
+### Performance Tips
+1. Use object pooling for frequently spawned objects
+2. Optimize particle effects and reduce their lifetime
+3. Use appropriate collider sizes
+4. Implement culling for off-screen objects
+5. Use the profiler to identify performance bottlenecks 

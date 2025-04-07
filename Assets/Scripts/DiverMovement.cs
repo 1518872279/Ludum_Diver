@@ -1,4 +1,6 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
+using UnityEngine.Rendering.Universal;
 
 public class DiverMovement : MonoBehaviour
 {
@@ -22,11 +24,43 @@ public class DiverMovement : MonoBehaviour
     [Tooltip("Angular drag for rotation in water")]
     public float waterAngularDrag = 2f;
     
+    [Header("Health Settings")]
+    [Tooltip("Maximum health of the diver")]
+    public int maxHealth = 100;
+    
+    [Tooltip("Current health of the diver")]
+    public int currentHealth;
+    
+    [Tooltip("Invulnerability time after taking damage")]
+    public float invulnerabilityTime = 1.5f;
+    
+    [Header("Visual Effects")]
+    [Tooltip("Particle system for damage effect")]
+    public ParticleSystem damageEffect;
+    
+    [Tooltip("Particle system for death effect")]
+    public ParticleSystem deathEffect;
+    
+    [Tooltip("Light for the diver")]
+    public Light2D diverLight;
+    
+    [Header("Audio")]
+    [Tooltip("Sound when taking damage")]
+    public AudioClip damageSound;
+    
+    [Tooltip("Sound when dying")]
+    public AudioClip deathSound;
+    
     private Rigidbody2D rb;
     private bool isLeftFlipperActive;
     private bool isRightFlipperActive;
     private float lastLeftFlipperTime;
     private float lastRightFlipperTime;
+    private bool isInvulnerable = false;
+    private float invulnerabilityTimer = 0f;
+    private bool isDead = false;
+    private AudioSource audioSource;
+    private SpriteRenderer spriteRenderer;
 
     private void Start()
     {
@@ -42,10 +76,27 @@ public class DiverMovement : MonoBehaviour
         rb.drag = waterDrag;
         rb.angularDrag = waterAngularDrag;
         rb.gravityScale = 0.1f; // Slight downward force to simulate sinking
+        
+        // Initialize health
+        currentHealth = maxHealth;
+        
+        // Get or add components
+        audioSource = GetComponent<AudioSource>();
+        if (audioSource == null) {
+            audioSource = gameObject.AddComponent<AudioSource>();
+        }
+        
+        spriteRenderer = GetComponent<SpriteRenderer>();
+        if (spriteRenderer == null) {
+            spriteRenderer = GetComponentInChildren<SpriteRenderer>();
+        }
     }
 
     private void Update()
     {
+        // Don't process input if dead
+        if (isDead) return;
+        
         // Check for flipper input
         if (Input.GetMouseButtonDown(0)) // Left mouse button
         {
@@ -66,10 +117,33 @@ public class DiverMovement : MonoBehaviour
         {
             isRightFlipperActive = false;
         }
+        
+        // Update invulnerability
+        if (isInvulnerable) {
+            invulnerabilityTimer += Time.deltaTime;
+            if (invulnerabilityTimer >= invulnerabilityTime) {
+                isInvulnerable = false;
+                invulnerabilityTimer = 0f;
+                
+                // Reset sprite color
+                if (spriteRenderer != null) {
+                    spriteRenderer.color = Color.white;
+                }
+            } else {
+                // Flash sprite during invulnerability
+                if (spriteRenderer != null) {
+                    float alpha = Mathf.PingPong(Time.time * 10f, 1f);
+                    spriteRenderer.color = new Color(1f, 1f, 1f, alpha);
+                }
+            }
+        }
     }
 
     private void FixedUpdate()
     {
+        // Don't apply movement if dead
+        if (isDead) return;
+        
         ApplyMovement();
         ClampVelocities();
     }
@@ -107,6 +181,88 @@ public class DiverMovement : MonoBehaviour
 
         // Clamp angular velocity
         rb.angularVelocity = Mathf.Clamp(rb.angularVelocity, -maxAngularVelocity, maxAngularVelocity);
+    }
+    
+    // Called when the diver takes damage
+    public void TakeDamage(int damage)
+    {
+        // Don't take damage if invulnerable or dead
+        if (isInvulnerable || isDead) return;
+        
+        // Apply damage
+        currentHealth -= damage;
+        
+        // Play damage effects
+        if (damageEffect != null) {
+            damageEffect.Play();
+        }
+        
+        // Play damage sound
+        if (damageSound != null && audioSource != null) {
+            audioSource.PlayOneShot(damageSound);
+        }
+        
+        // Flash the sprite
+        if (spriteRenderer != null) {
+            spriteRenderer.color = Color.red;
+        }
+        
+        // Check if dead
+        if (currentHealth <= 0) {
+            OnDeath();
+        } else {
+            // Become invulnerable
+            isInvulnerable = true;
+            invulnerabilityTimer = 0f;
+        }
+    }
+    
+    // Called when the diver dies
+    public void OnDeath()
+    {
+        if (isDead) return;
+        
+        isDead = true;
+        
+        // Disable movement
+        rb.velocity = Vector2.zero;
+        rb.angularVelocity = 0f;
+        
+        // Play death effects
+        if (deathEffect != null) {
+            deathEffect.Play();
+        }
+        
+        // Play death sound
+        if (deathSound != null && audioSource != null) {
+            audioSource.PlayOneShot(deathSound);
+        }
+        
+        // Change sprite color
+        if (spriteRenderer != null) {
+            spriteRenderer.color = Color.gray;
+        }
+        
+        // Disable light
+        if (diverLight != null) {
+            diverLight.intensity = 0.5f;
+            diverLight.color = Color.red;
+        }
+        
+        // Disable colliders
+        Collider2D[] colliders = GetComponents<Collider2D>();
+        foreach (Collider2D collider in colliders) {
+            collider.enabled = false;
+        }
+        
+        // Reload scene after delay
+        Invoke("ReloadScene", 3f);
+    }
+    
+    // Reload the current scene
+    private void ReloadScene()
+    {
+        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
 
     // Helper method to visualize the movement direction in the editor

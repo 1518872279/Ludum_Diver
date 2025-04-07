@@ -1,5 +1,8 @@
 using UnityEngine;
 using System.Collections.Generic;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 public enum NodeType {
     Normal,
@@ -81,13 +84,35 @@ public class CavernGenerator : MonoBehaviour {
     [Tooltip("Maximum number of collectibles per room")]
     public int maxCollectiblesPerRoom = 2;
 
+    [Header("Editor Settings")]
+    [Tooltip("Seed for random generation (0 = random)")]
+    public int randomSeed = 0;
+    
+    [Tooltip("Parent object for generated rooms")]
+    public Transform roomsParent;
+
     private CavernNode rootNode;
     private List<CavernNode> allNodes = new List<CavernNode>();
     private System.Random random;
+    private bool isGenerated = false;
 
     void Start() {
-        // Initialize random with a seed for reproducible generation
-        random = new System.Random(System.DateTime.Now.Millisecond);
+        if (!isGenerated) {
+            GenerateCavern();
+        }
+    }
+    
+    public void GenerateCavern() {
+        // Clear existing cavern if any
+        ClearCavern();
+        
+        // Initialize random with seed
+        if (randomSeed != 0) {
+            random = new System.Random(randomSeed);
+            Random.InitState(randomSeed);
+        } else {
+            random = new System.Random(System.DateTime.Now.Millisecond);
+        }
         
         // Create the single entry node where the player spawns
         rootNode = new CavernNode(new Vector2(0, 0));
@@ -106,6 +131,50 @@ public class CavernGenerator : MonoBehaviour {
         if (playerSpawnPoint != null) {
             playerSpawnPoint.position = new Vector3(rootNode.position.x, rootNode.position.y, 0);
         }
+        
+        isGenerated = true;
+    }
+    
+    public void ClearCavern() {
+        // Destroy all existing rooms
+        if (roomsParent != null) {
+            #if UNITY_EDITOR
+            if (!Application.isPlaying) {
+                // In editor mode, use DestroyImmediate
+                while (roomsParent.childCount > 0) {
+                    DestroyImmediate(roomsParent.GetChild(0).gameObject);
+                }
+            } else {
+                // In play mode, use Destroy
+                foreach (Transform child in roomsParent) {
+                    Destroy(child.gameObject);
+                }
+            }
+            #else
+            foreach (Transform child in roomsParent) {
+                Destroy(child.gameObject);
+            }
+            #endif
+        } else {
+            // If no parent specified, find and destroy all rooms
+            GameObject[] rooms = GameObject.FindGameObjectsWithTag("Room");
+            foreach (GameObject room in rooms) {
+                #if UNITY_EDITOR
+                if (!Application.isPlaying) {
+                    DestroyImmediate(room);
+                } else {
+                    Destroy(room);
+                }
+                #else
+                Destroy(room);
+                #endif
+            }
+        }
+        
+        // Reset state
+        rootNode = null;
+        allNodes.Clear();
+        isGenerated = false;
     }
 
     void GenerateBranches(CavernNode node, int depth) {
@@ -184,7 +253,31 @@ public class CavernGenerator : MonoBehaviour {
         }
         
         // Instantiate the room
-        GameObject room = Instantiate(prefab, new Vector3(node.position.x, node.position.y, 0), Quaternion.identity);
+        GameObject room;
+        #if UNITY_EDITOR
+        if (!Application.isPlaying) {
+            // In editor mode, use PrefabUtility
+            room = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
+        } else {
+            // In play mode, use Instantiate
+            room = Instantiate(prefab);
+        }
+        #else
+        room = Instantiate(prefab);
+        #endif
+        
+        // Position the room
+        room.transform.position = new Vector3(node.position.x, node.position.y, 0);
+        
+        // Set parent if specified
+        if (roomsParent != null) {
+            room.transform.SetParent(roomsParent);
+        }
+        
+        // Tag the room for easy finding
+        room.tag = "Room";
+        
+        // Store reference to the room
         node.roomObject = room;
         
         // Add obstacles, portals, and collectibles
@@ -210,10 +303,10 @@ public class CavernGenerator : MonoBehaviour {
             }
         }
         
-        // Place portals
-        if (Random.value < portalSpawnChance && portalPrefab != null) {
-            PlaceObjectInRoom(node.roomObject, portalPrefab, roomBounds);
-        }
+        // Portals are temporarily disabled
+        // if (Random.value < portalSpawnChance && portalPrefab != null) {
+        //     PlaceObjectInRoom(node.roomObject, portalPrefab, roomBounds);
+        // }
         
         // Place collectibles
         int collectibleCount = Random.Range(0, maxCollectiblesPerRoom + 1);
@@ -244,7 +337,22 @@ public class CavernGenerator : MonoBehaviour {
         );
         
         // Instantiate the object
-        GameObject obj = Instantiate(prefab, position, Quaternion.identity, room.transform);
+        GameObject obj;
+        #if UNITY_EDITOR
+        if (!Application.isPlaying) {
+            // In editor mode, use PrefabUtility
+            obj = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
+        } else {
+            // In play mode, use Instantiate
+            obj = Instantiate(prefab);
+        }
+        #else
+        obj = Instantiate(prefab);
+        #endif
+        
+        // Position and parent the object
+        obj.transform.position = position;
+        obj.transform.SetParent(room.transform);
         
         // Add some random rotation
         obj.transform.rotation = Quaternion.Euler(0, 0, Random.Range(0f, 360f));
@@ -252,7 +360,7 @@ public class CavernGenerator : MonoBehaviour {
 
     // Helper method to visualize the cavern structure in the editor
     void OnDrawGizmos() {
-        if (!Application.isPlaying || rootNode == null) return;
+        if (rootNode == null) return;
         
         DrawNodeGizmos(rootNode);
     }
@@ -289,4 +397,40 @@ public class CavernGenerator : MonoBehaviour {
                 return Color.gray;
         }
     }
-} 
+}
+
+#if UNITY_EDITOR
+[CustomEditor(typeof(CavernGenerator))]
+public class CavernGeneratorEditor : Editor
+{
+    public override void OnInspectorGUI()
+    {
+        // Draw the default inspector
+        DrawDefaultInspector();
+        
+        // Get the target
+        CavernGenerator generator = (CavernGenerator)target;
+        
+        // Add a space
+        EditorGUILayout.Space();
+        
+        // Add buttons for editor functionality
+        EditorGUILayout.BeginHorizontal();
+        
+        if (GUILayout.Button("Generate Cavern"))
+        {
+            generator.GenerateCavern();
+        }
+        
+        if (GUILayout.Button("Clear Cavern"))
+        {
+            generator.ClearCavern();
+        }
+        
+        EditorGUILayout.EndHorizontal();
+        
+        // Add a note about editor mode
+        EditorGUILayout.HelpBox("Use these buttons to generate or clear the cavern in Editor Mode.", MessageType.Info);
+    }
+}
+#endif 
