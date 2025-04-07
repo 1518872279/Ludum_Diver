@@ -102,7 +102,7 @@ MonoBehaviour:
   jellyfishType: 0
   baseSpeed: 3
   maxSpeed: 6
-  steeringSensitivity: 1.5
+  steeringSensitivity: 0
   movementRange: 5
   damage: 100
   trailEffect: {fileID: 0}
