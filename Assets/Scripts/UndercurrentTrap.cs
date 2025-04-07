@@ -21,12 +21,6 @@ public class UndercurrentTrap : MonoBehaviour
     [Tooltip("Time the undercurrent is inactive")]
     public float inactiveTime = 2f;
     
-    [Tooltip("Time to rotate the undercurrent direction")]
-    public float rotationInterval = 5f;
-    
-    [Tooltip("Amount to rotate in degrees")]
-    public float rotationAmount = 45f;
-    
     [Header("Visual Effects")]
     [Tooltip("Particle system for the undercurrent effect")]
     public ParticleSystem currentEffect;
@@ -52,7 +46,8 @@ public class UndercurrentTrap : MonoBehaviour
     private BoxCollider2D currentCollider;
     private bool isActive = true;
     private Coroutine activationCoroutine;
-    private Coroutine rotationCoroutine;
+    private ParticleSystem.MainModule currentEffectMain;
+    private ParticleSystem.EmissionModule currentEffectEmission;
 
     private void Start()
     {
@@ -86,16 +81,15 @@ public class UndercurrentTrap : MonoBehaviour
             currentLight.color = currentLightColor;
         }
         
-        // Start current effect
+        // Set up particle system
         if (currentEffect != null) {
-            currentEffect.Play();
+            currentEffectMain = currentEffect.main;
+            currentEffectEmission = currentEffect.emission;
+            currentEffect.Stop(); // Start stopped
         }
         
         // Start the activation cycle
         activationCoroutine = StartCoroutine(ActivationCycle());
-        
-        // Start the rotation cycle
-        rotationCoroutine = StartCoroutine(RotationCycle());
     }
     
     private void UpdateCurrentVector()
@@ -120,24 +114,6 @@ public class UndercurrentTrap : MonoBehaviour
         }
     }
     
-    private IEnumerator RotationCycle()
-    {
-        while (true)
-        {
-            yield return new WaitForSeconds(rotationInterval);
-            
-            // Rotate the direction
-            currentDirection += rotationAmount;
-            if (currentDirection >= 360f)
-            {
-                currentDirection -= 360f;
-            }
-            
-            UpdateCurrentVector();
-            Debug.Log("Undercurrent rotated to: " + currentDirection + " degrees");
-        }
-    }
-    
     private void SetVisualEffects(bool active)
     {
         if (currentEffect != null)
@@ -145,10 +121,12 @@ public class UndercurrentTrap : MonoBehaviour
             if (active)
             {
                 currentEffect.Play();
+                currentEffectEmission.rateOverTime = currentEffectEmission.rateOverTime.constant;
             }
             else
             {
                 currentEffect.Stop();
+                currentEffectEmission.rateOverTime = 0;
             }
         }
         
@@ -170,10 +148,9 @@ public class UndercurrentTrap : MonoBehaviour
             isPlayerInTrap = true;
             playerDiver = other.GetComponent<DiverMovement>();
             
-            // Increase current effect when player enters
+            // Increase current effect when player enters and undercurrent is active
             if (currentEffect != null && isActive) {
-                var emission = currentEffect.emission;
-                emission.rateOverTime = emission.rateOverTime.constant * 2;
+                currentEffectEmission.rateOverTime = currentEffectEmission.rateOverTime.constant * 2;
             }
             
             Debug.Log("Player entered undercurrent");
@@ -188,9 +165,8 @@ public class UndercurrentTrap : MonoBehaviour
             playerDiver = null;
             
             // Reset current effect when player exits
-            if (currentEffect != null) {
-                var emission = currentEffect.emission;
-                emission.rateOverTime = emission.rateOverTime.constant / 2;
+            if (currentEffect != null && isActive) {
+                currentEffectEmission.rateOverTime = currentEffectEmission.rateOverTime.constant / 2;
             }
             
             Debug.Log("Player exited undercurrent");
@@ -247,11 +223,6 @@ public class UndercurrentTrap : MonoBehaviour
         if (activationCoroutine != null)
         {
             StopCoroutine(activationCoroutine);
-        }
-        
-        if (rotationCoroutine != null)
-        {
-            StopCoroutine(rotationCoroutine);
         }
         
         // Reset visual effects
