@@ -105,7 +105,7 @@ MonoBehaviour:
   maxSpeed: 6
   steeringSensitivity: 0
   movementRange: 5
-  damage: 100
+  damage: 30
   trailEffect: {fileID: 0}
   jellyfishLight: {fileID: 0}
   lightPulseSpeed: 1
