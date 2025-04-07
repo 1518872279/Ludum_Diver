@@ -34,6 +34,19 @@ public class DiverMovement : MonoBehaviour
     [Tooltip("Invulnerability time after taking damage")]
     public float invulnerabilityTime = 1.5f;
     
+    [Header("Animation Settings")]
+    [Tooltip("Animator component for the diver")]
+    public Animator diverAnimator;
+    
+    [Tooltip("Animation parameter for left foot")]
+    public string leftFootParam = "LeftFoot";
+    
+    [Tooltip("Animation parameter for right foot")]
+    public string rightFootParam = "RightFoot";
+    
+    [Tooltip("Animation parameter for both feet")]
+    public string bothFeetParam = "BothFeet";
+    
     [Header("Visual Effects")]
     [Tooltip("Particle system for damage effect")]
     public ParticleSystem damageEffect;
@@ -61,6 +74,8 @@ public class DiverMovement : MonoBehaviour
     private bool isDead = false;
     private AudioSource audioSource;
     private SpriteRenderer spriteRenderer;
+    private bool wasLeftFlipperActive;
+    private bool wasRightFlipperActive;
 
     private void Start()
     {
@@ -90,6 +105,18 @@ public class DiverMovement : MonoBehaviour
         if (spriteRenderer == null) {
             spriteRenderer = GetComponentInChildren<SpriteRenderer>();
         }
+        
+        // Get animator if not assigned
+        if (diverAnimator == null) {
+            diverAnimator = GetComponent<Animator>();
+            if (diverAnimator == null) {
+                Debug.LogWarning("No Animator component found on the diver. Animations will not work.");
+            }
+        }
+        
+        // Initialize flipper states
+        wasLeftFlipperActive = false;
+        wasRightFlipperActive = false;
     }
 
     private void Update()
@@ -118,6 +145,9 @@ public class DiverMovement : MonoBehaviour
             isRightFlipperActive = false;
         }
         
+        // Update animations
+        UpdateAnimations();
+        
         // Update invulnerability
         if (isInvulnerable) {
             invulnerabilityTimer += Time.deltaTime;
@@ -137,6 +167,53 @@ public class DiverMovement : MonoBehaviour
                 }
             }
         }
+    }
+    
+    private void UpdateAnimations()
+    {
+        if (diverAnimator == null) return;
+        
+        // Check if flipper states have changed
+        bool leftStateChanged = isLeftFlipperActive != wasLeftFlipperActive;
+        bool rightStateChanged = isRightFlipperActive != wasRightFlipperActive;
+        
+        // If both flippers are active, trigger the combined animation
+        if (isLeftFlipperActive && isRightFlipperActive) {
+            // Reset individual foot animations
+            diverAnimator.SetBool(leftFootParam, false);
+            diverAnimator.SetBool(rightFootParam, false);
+            
+            // Trigger combined animation
+            diverAnimator.SetBool(bothFeetParam, true);
+        } 
+        // If only left flipper is active
+        else if (isLeftFlipperActive) {
+            // Reset other animations
+            diverAnimator.SetBool(rightFootParam, false);
+            diverAnimator.SetBool(bothFeetParam, false);
+            
+            // Trigger left foot animation
+            diverAnimator.SetBool(leftFootParam, true);
+        } 
+        // If only right flipper is active
+        else if (isRightFlipperActive) {
+            // Reset other animations
+            diverAnimator.SetBool(leftFootParam, false);
+            diverAnimator.SetBool(bothFeetParam, false);
+            
+            // Trigger right foot animation
+            diverAnimator.SetBool(rightFootParam, true);
+        } 
+        // If no flippers are active, reset all animations
+        else {
+            diverAnimator.SetBool(leftFootParam, false);
+            diverAnimator.SetBool(rightFootParam, false);
+            diverAnimator.SetBool(bothFeetParam, false);
+        }
+        
+        // Update previous states
+        wasLeftFlipperActive = isLeftFlipperActive;
+        wasRightFlipperActive = isRightFlipperActive;
     }
 
     private void FixedUpdate()
@@ -253,6 +330,13 @@ public class DiverMovement : MonoBehaviour
         Collider2D[] colliders = GetComponents<Collider2D>();
         foreach (Collider2D collider in colliders) {
             collider.enabled = false;
+        }
+        
+        // Reset animations
+        if (diverAnimator != null) {
+            diverAnimator.SetBool(leftFootParam, false);
+            diverAnimator.SetBool(rightFootParam, false);
+            diverAnimator.SetBool(bothFeetParam, false);
         }
         
         // Reload scene after delay

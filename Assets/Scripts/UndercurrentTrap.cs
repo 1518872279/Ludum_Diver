@@ -48,6 +48,8 @@ public class UndercurrentTrap : MonoBehaviour
     private Coroutine activationCoroutine;
     private ParticleSystem.MainModule currentEffectMain;
     private ParticleSystem.EmissionModule currentEffectEmission;
+    private float defaultEmissionRate = 0f;
+    private bool isInitialized = false;
 
     private void Start()
     {
@@ -85,8 +87,19 @@ public class UndercurrentTrap : MonoBehaviour
         if (currentEffect != null) {
             currentEffectMain = currentEffect.main;
             currentEffectEmission = currentEffect.emission;
-            currentEffect.Stop(); // Start stopped
+            
+            // Store the default emission rate
+            defaultEmissionRate = currentEffectEmission.rateOverTime.constant;
+            
+            // Start with emission rate at 0
+            currentEffectEmission.rateOverTime = 0;
+            
+            // Make sure the particle system is ready to play
+            currentEffect.Play();
+            currentEffect.Pause();
         }
+        
+        isInitialized = true;
         
         // Start the activation cycle
         activationCoroutine = StartCoroutine(ActivationCycle());
@@ -100,6 +113,11 @@ public class UndercurrentTrap : MonoBehaviour
     
     private IEnumerator ActivationCycle()
     {
+        // Wait for initialization to complete
+        while (!isInitialized) {
+            yield return null;
+        }
+        
         while (true)
         {
             // Active phase
@@ -120,13 +138,23 @@ public class UndercurrentTrap : MonoBehaviour
         {
             if (active)
             {
+                // Resume the particle system
                 currentEffect.Play();
-                currentEffectEmission.rateOverTime = currentEffectEmission.rateOverTime.constant;
+                
+                // Set the emission rate to the default value
+                currentEffectEmission.rateOverTime = defaultEmissionRate;
+                
+                Debug.Log("Undercurrent activated - Particle system playing with emission rate: " + defaultEmissionRate);
             }
             else
             {
-                currentEffect.Stop();
+                // Pause the particle system instead of stopping it
+                currentEffect.Pause();
+                
+                // Set emission rate to 0
                 currentEffectEmission.rateOverTime = 0;
+                
+                Debug.Log("Undercurrent deactivated - Particle system paused");
             }
         }
         
@@ -150,7 +178,8 @@ public class UndercurrentTrap : MonoBehaviour
             
             // Increase current effect when player enters and undercurrent is active
             if (currentEffect != null && isActive) {
-                currentEffectEmission.rateOverTime = currentEffectEmission.rateOverTime.constant * 2;
+                currentEffectEmission.rateOverTime = defaultEmissionRate * 2;
+                Debug.Log("Player entered undercurrent - Increased emission rate to: " + (defaultEmissionRate * 2));
             }
             
             Debug.Log("Player entered undercurrent");
@@ -166,7 +195,8 @@ public class UndercurrentTrap : MonoBehaviour
             
             // Reset current effect when player exits
             if (currentEffect != null && isActive) {
-                currentEffectEmission.rateOverTime = currentEffectEmission.rateOverTime.constant / 2;
+                currentEffectEmission.rateOverTime = defaultEmissionRate;
+                Debug.Log("Player exited undercurrent - Reset emission rate to: " + defaultEmissionRate);
             }
             
             Debug.Log("Player exited undercurrent");
@@ -227,5 +257,12 @@ public class UndercurrentTrap : MonoBehaviour
         
         // Reset visual effects
         SetVisualEffects(false);
+    }
+    
+    // Public method to manually activate/deactivate the undercurrent
+    public void SetActive(bool active)
+    {
+        isActive = active;
+        SetVisualEffects(active);
     }
 } 
