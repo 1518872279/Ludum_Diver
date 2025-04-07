@@ -748,4 +748,198 @@ The game features three types of traps: Whirlpools, Undercurrents, and Sharp Roc
 2. Optimize particle effects and reduce their lifetime
 3. Use appropriate collider sizes
 4. Implement culling for off-screen objects
-5. Use the profiler to identify performance bottlenecks 
+5. Use the profiler to identify performance bottlenecks
+
+## Sonar System
+
+The sonar system allows the diver to emit sonar waves to detect objects in the environment, providing a useful exploration tool in dark underwater areas.
+
+### Implementation Details
+
+The sonar system consists of two main components:
+1. **SonarMechanic**: Handles the sonar wave emission, detection, and cooldown
+2. **RippleEffect**: Manages the visual effects when the sonar wave hits objects
+
+#### SonarMechanic Script
+The SonarMechanic script implements the core functionality:
+- Emits sonar waves in all directions using raycasting
+- Detects objects within the sonar range
+- Spawns ripple effects at hit points
+- Manages cooldown between sonar activations
+- Provides visual and audio feedback
+
+#### RippleEffect Script
+The RippleEffect script handles the visual representation of detected objects:
+- Creates expanding circular ripples at hit points
+- Manages scaling and fading animations
+- Controls light intensity and particle effects
+- Automatically cleans up after the effect duration
+
+### Setup Instructions
+
+1. **Add SonarMechanic Component**:
+   - Add the `SonarMechanic` script to the player object (the same object that has the `DiverMovement` script).
+   - Configure the sonar settings in the Inspector.
+
+2. **Create Ripple Prefab**:
+   - Create a new GameObject with a SpriteRenderer component.
+   - Add the `RippleEffect` script to the GameObject.
+   - Configure the ripple settings in the Inspector.
+   - Add a Light2D component for visual effect.
+   - Add a ParticleSystem component for additional visual effects.
+   - Create a prefab from this GameObject.
+
+3. **Configure SonarMechanic**:
+   - Assign the ripple prefab to the `ripplePrefab` field in the SonarMechanic component.
+   - Add a ParticleSystem for the sonar wave effect.
+   - Add a Light2D component for the sonar light effect.
+   - Assign an AudioClip for the sonar sound.
+
+### Usage
+
+- Press the Space key to activate the sonar.
+- The sonar will emit waves in all directions, detecting objects within its range.
+- When an object is detected, a ripple effect will appear at the hit point.
+- The sonar has a cooldown period between uses.
+
+### Settings
+
+#### SonarMechanic Settings
+- **Sonar Range**: Maximum distance the sonar wave travels (default: 20).
+- **Cooldown Time**: Time between sonar activations (default: 5 seconds).
+- **Number of Rays**: Number of rays cast for detection (default: 36, which means rays every 10 degrees).
+- **Ripple Duration**: How long the ripple effect lasts (default: 2 seconds).
+- **Light Duration**: How long the sonar light effect lasts (default: 0.5 seconds).
+- **Sonar Volume**: Volume of the sonar sound (default: 0.5).
+
+#### RippleEffect Settings
+- **Duration**: How long the ripple effect lasts (default: 2 seconds).
+- **Initial Scale**: Starting size of the ripple (default: 0.1).
+- **Max Scale**: Maximum size of the ripple (default: 2).
+- **Ripple Color**: Color of the ripple effect (default: cyan with 0.5 alpha).
+
+### Integration with DiverMovement
+
+The sonar mechanic is designed to work seamlessly with the DiverMovement script:
+- Both scripts can be attached to the same player object
+- The sonar mechanic doesn't interfere with the diver's movement
+- The sonar can be used while moving, allowing for dynamic exploration
+- The cooldown system prevents the sonar from being spammed
+
+### Visual and Audio Feedback
+
+The sonar system provides clear feedback to the player:
+- Visual rays show the direction of detection
+- Ripple effects appear at hit points
+- Sonar wave particle effects indicate activation
+- Light effects highlight detected areas
+- Audio cues signal sonar activation
+
+### Troubleshooting
+
+- **Sonar Not Working**: 
+  - Ensure the player has the "Player" tag
+  - Check that the SonarMechanic script is properly attached
+  - Verify that the Space key is not being used by another script
+  - Check the console for any error messages
+
+- **No Ripple Effects**: 
+  - Check that the ripple prefab is assigned
+  - Verify the RippleEffect script is attached to the prefab
+  - Ensure the ripple prefab has a SpriteRenderer component
+  - Check that the ripple duration is set appropriately
+
+- **Sonar Not Detecting Objects**: 
+  - Make sure objects have colliders
+  - Verify objects are not tagged as "Player"
+  - Check that objects are within the sonar range
+  - Ensure the number of rays is sufficient for detection
+
+- **Performance Issues**: 
+  - Reduce the number of rays if performance is an issue
+  - Decrease the sonar range
+  - Simplify the ripple effect
+  - Reduce the number of active ripples
+
+### Advanced Customization
+
+For more advanced users, the sonar system can be customized:
+- Modify the raycast layer mask to detect specific objects
+- Adjust the ripple effect to match your game's visual style
+- Create different types of ripple effects for different objects
+- Implement object highlighting or tagging based on sonar detection
+
+### Code Examples
+
+#### Creating a Custom Ripple Effect
+```csharp
+// Example of creating a custom ripple effect for specific objects
+public class CustomRippleEffect : RippleEffect
+{
+    public Color specialObjectColor = Color.yellow;
+    
+    public void InitializeForSpecialObject()
+    {
+        // Override the default color for special objects
+        rippleColor = specialObjectColor;
+        
+        // Set up the ripple
+        if (rippleSprite != null) {
+            rippleSprite.color = rippleColor;
+        }
+        
+        // Play a special particle effect
+        if (rippleParticles != null) {
+            var main = rippleParticles.main;
+            main.startColor = specialObjectColor;
+            rippleParticles.Play();
+        }
+    }
+}
+```
+
+#### Adding Object Highlighting
+```csharp
+// Example of highlighting objects detected by sonar
+public class SonarHighlightable : MonoBehaviour
+{
+    public Color highlightColor = Color.yellow;
+    public float highlightDuration = 3f;
+    
+    private SpriteRenderer spriteRenderer;
+    private Color originalColor;
+    private float highlightTimer = 0f;
+    private bool isHighlighted = false;
+    
+    void Start()
+    {
+        spriteRenderer = GetComponent<SpriteRenderer>();
+        if (spriteRenderer != null) {
+            originalColor = spriteRenderer.color;
+        }
+    }
+    
+    void Update()
+    {
+        if (isHighlighted) {
+            highlightTimer += Time.deltaTime;
+            if (highlightTimer >= highlightDuration) {
+                // Remove highlight
+                if (spriteRenderer != null) {
+                    spriteRenderer.color = originalColor;
+                }
+                isHighlighted = false;
+            }
+        }
+    }
+    
+    public void Highlight()
+    {
+        if (spriteRenderer != null) {
+            spriteRenderer.color = highlightColor;
+            isHighlighted = true;
+            highlightTimer = 0f;
+        }
+    }
+}
+```
