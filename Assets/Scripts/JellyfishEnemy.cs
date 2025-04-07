@@ -63,6 +63,7 @@ public class JellyfishEnemy : MonoBehaviour
     private float movementTimer = 0f;
     private AudioSource audioSource;
     private float initialLightIntensity;
+    private CircleCollider2D jellyfishCollider;
 
     private void Start()
     {
@@ -81,6 +82,14 @@ public class JellyfishEnemy : MonoBehaviour
         audioSource = GetComponent<AudioSource>();
         if (audioSource == null) {
             audioSource = gameObject.AddComponent<AudioSource>();
+        }
+        
+        // Get or add collider
+        jellyfishCollider = GetComponent<CircleCollider2D>();
+        if (jellyfishCollider == null) {
+            jellyfishCollider = gameObject.AddComponent<CircleCollider2D>();
+            jellyfishCollider.isTrigger = true;
+            jellyfishCollider.radius = 0.5f; // Default radius
         }
         
         // Set up audio
@@ -153,6 +162,8 @@ public class JellyfishEnemy : MonoBehaviour
     {
         if (other.CompareTag("Player"))
         {
+            Debug.Log("Jellyfish hit player!");
+            
             // Play hit sound
             if (hitSound != null && audioSource != null) {
                 audioSource.PlayOneShot(hitSound);
@@ -164,6 +175,11 @@ public class JellyfishEnemy : MonoBehaviour
             {
                 // Apply damage to player
                 player.TakeDamage(damage);
+                Debug.Log("Jellyfish dealt " + damage + " damage to player");
+            }
+            else
+            {
+                Debug.LogWarning("Player object does not have DiverMovement component!");
             }
         }
     }
@@ -186,5 +202,9 @@ public class JellyfishEnemy : MonoBehaviour
                 transform.position + Vector3.left * movementRange
             );
         }
+        
+        // Draw collider
+        Gizmos.color = new Color(1f, 0.5f, 0f, 0.3f);
+        Gizmos.DrawWireSphere(transform.position, GetComponent<CircleCollider2D>()?.radius ?? 0.5f);
     }
 } 
