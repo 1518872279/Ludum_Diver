@@ -8,33 +8,40 @@ public class SharkEnemy : MonoBehaviour
 {
     [Header("Detection Settings")]
     [Tooltip("Range at which the shark will detect and chase the player")]
-    public float chaseRange = 12f;
+    public float chaseRange = 10f;
     
     [Tooltip("Time to wait before returning to patrol after losing the player")]
-    public float returnToPatrolDelay = 3f;
+    public float returnToPatrolDelay = 2f;
     
     [Header("Movement Settings")]
-    [Tooltip("Movement speed of the shark")]
-    public float speed = 5f;
+    [Tooltip("Base movement speed of the shark")]
+    public float baseSpeed = 5f;
     
-    [Tooltip("How quickly the shark turns toward its target")]
-    public float steeringSensitivity = 2f;
+    [Tooltip("Chase speed multiplier")]
+    public float chaseSpeedMultiplier = 1.5f;
     
     [Tooltip("Maximum speed the shark can move at")]
     public float maxSpeed = 8f;
     
+    [Tooltip("How quickly the shark turns toward its target")]
+    public float steeringSensitivity = 1.5f;
+    
     [Header("Patrol Settings")]
-    [Tooltip("List of patrol waypoints")]
-    public List<Transform> patrolNodes;
+    [Tooltip("List of waypoints for the shark to patrol between")]
+    public List<Transform> patrolNodes = new List<Transform>();
     
-    [Tooltip("Distance threshold to consider a waypoint reached")]
-    public float waypointReachedDistance = 1f;
+    [Tooltip("Time to wait at each patrol node")]
+    public float patrolWaitTime = 2f;
     
-    [Tooltip("Time to wait at each waypoint")]
-    public float waitTimeAtWaypoint = 1f;
+    [Header("Attack Settings")]
+    [Tooltip("Damage dealt to player on contact")]
+    public int damage = 100; // Instant kill damage
     
     [Header("Visual Effects")]
-    [Tooltip("Particle system for chase mode")]
+    [Tooltip("Particle system for patrol state")]
+    public ParticleSystem patrolEffect;
+    
+    [Tooltip("Particle system for chase state")]
     public ParticleSystem chaseEffect;
     
     [Tooltip("Light for the shark")]
@@ -47,15 +54,20 @@ public class SharkEnemy : MonoBehaviour
     [Tooltip("Sound when shark attacks")]
     public AudioClip attackSound;
     
-    private int currentNodeIndex = 0;
+    [Tooltip("Ambient sound for shark")]
+    public AudioClip ambientSound;
+    
     private SharkState currentState = SharkState.Patrol;
     private Transform player;
+    private int currentNodeIndex = 0;
     private float waitTimer = 0f;
     private float returnToPatrolTimer = 0f;
-    private bool isWaiting = false;
     private AudioSource audioSource;
     private Rigidbody2D rb;
-    
+    private Vector2 randomDirection;
+    private float directionChangeTimer = 0f;
+    private float directionChangeInterval = 3f;
+
     void Start() {
         // Find the player
         player = GameObject.FindGameObjectWithTag("Player")?.transform;
@@ -68,7 +80,7 @@ public class SharkEnemy : MonoBehaviour
         if (rb == null) {
             rb = gameObject.AddComponent<Rigidbody2D>();
             rb.gravityScale = 0f;
-            rb.drag = 1f;
+            rb.drag = 1.5f;
         }
         
         audioSource = GetComponent<AudioSource>();
@@ -76,8 +88,20 @@ public class SharkEnemy : MonoBehaviour
             audioSource = gameObject.AddComponent<AudioSource>();
         }
         
-        // Initialize state
-        currentState = SharkState.Patrol;
+        // Play ambient sound
+        if (ambientSound != null && audioSource != null) {
+            audioSource.clip = ambientSound;
+            audioSource.loop = true;
+            audioSource.Play();
+        }
+        
+        // Initialize random direction
+        randomDirection = Random.insideUnitCircle.normalized;
+        
+        // Start patrol effects
+        if (patrolEffect != null) {
+            patrolEffect.Play();
+        }
     }
     
     void Update() {
@@ -92,7 +116,7 @@ public class SharkEnemy : MonoBehaviour
                 if (distanceToPlayer <= chaseRange) {
                     TransitionToChase();
                 } else {
-                    Patrol();
+                    PatrolMovement();
                 }
                 break;
                 
@@ -104,12 +128,12 @@ public class SharkEnemy : MonoBehaviour
                         TransitionToPatrol();
                     } else {
                         // Continue chasing for a bit after losing the player
-                        ChasePlayer();
+                        ChaseMovement();
                     }
                 } else {
                     // Reset return timer when player is in range
                     returnToPatrolTimer = 0f;
-                    ChasePlayer();
+                    ChaseMovement();
                 }
                 break;
         }
@@ -121,18 +145,20 @@ public class SharkEnemy : MonoBehaviour
             
             // Play detection sound
             if (detectionSound != null && audioSource != null) {
-                audioSource.clip = detectionSound;
-                audioSource.Play();
+                audioSource.PlayOneShot(detectionSound);
             }
             
-            // Activate chase effects
+            // Switch effects
+            if (patrolEffect != null) {
+                patrolEffect.Stop();
+            }
             if (chaseEffect != null) {
                 chaseEffect.Play();
             }
             
             // Adjust light
             if (sharkLight != null) {
-                sharkLight.intensity = 1.5f;
+                sharkLight.intensity = 1.8f;
                 sharkLight.color = new Color(1f, 0.3f, 0.3f);
             }
         }
@@ -142,64 +168,69 @@ public class SharkEnemy : MonoBehaviour
         if (currentState != SharkState.Patrol) {
             currentState = SharkState.Patrol;
             
-            // Stop chase effects
+            // Switch effects
             if (chaseEffect != null) {
                 chaseEffect.Stop();
+            }
+            if (patrolEffect != null) {
+                patrolEffect.Play();
             }
             
             // Reset light
             if (sharkLight != null) {
                 sharkLight.intensity = 1f;
-                sharkLight.color = Color.white;
+                sharkLight.color = new Color(0.7f, 0.7f, 0.7f);
             }
         }
     }
     
-    void Patrol() {
-        if (patrolNodes.Count == 0) return;
-        
-        // If waiting at a waypoint
-        if (isWaiting) {
-            waitTimer += Time.deltaTime;
-            if (waitTimer >= waitTimeAtWaypoint) {
-                isWaiting = false;
-                waitTimer = 0f;
-                currentNodeIndex = (currentNodeIndex + 1) % patrolNodes.Count;
+    void PatrolMovement() {
+        if (patrolNodes.Count == 0) {
+            // Random movement if no patrol nodes
+            directionChangeTimer += Time.deltaTime;
+            if (directionChangeTimer >= directionChangeInterval) {
+                randomDirection = Random.insideUnitCircle.normalized;
+                directionChangeTimer = 0f;
             }
-            return;
+            
+            // Apply movement
+            rb.velocity = randomDirection * baseSpeed;
+        } else {
+            // Move to next patrol node
+            Transform currentNode = patrolNodes[currentNodeIndex];
+            if (currentNode != null) {
+                Vector2 direction = (currentNode.position - transform.position).normalized;
+                rb.velocity = direction * baseSpeed;
+                
+                // Check if reached node
+                if (Vector2.Distance(transform.position, currentNode.position) < 0.5f) {
+                    waitTimer += Time.deltaTime;
+                    if (waitTimer >= patrolWaitTime) {
+                        waitTimer = 0f;
+                        currentNodeIndex = (currentNodeIndex + 1) % patrolNodes.Count;
+                    }
+                }
+            }
         }
-        
-        Transform targetNode = patrolNodes[currentNodeIndex];
-        if (targetNode == null) return;
-        
-        // Move toward the target node
-        Vector2 direction = (targetNode.position - transform.position).normalized;
-        rb.velocity = direction * speed;
         
         // Clamp velocity
         if (rb.velocity.magnitude > maxSpeed) {
             rb.velocity = rb.velocity.normalized * maxSpeed;
         }
         
-        // Smoothly rotate towards the patrol node
-        float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
+        // Smoothly rotate towards movement direction
+        float angle = Mathf.Atan2(rb.velocity.y, rb.velocity.x) * Mathf.Rad2Deg;
         transform.rotation = Quaternion.Lerp(transform.rotation, Quaternion.Euler(0, 0, angle), steeringSensitivity * Time.deltaTime);
-        
-        // Check if reached the waypoint
-        if (Vector2.Distance(transform.position, targetNode.position) < waypointReachedDistance) {
-            isWaiting = true;
-            waitTimer = 0f;
-        }
     }
     
-    void ChasePlayer() {
+    void ChaseMovement() {
         if (player == null) return;
         
         // Calculate direction to player
         Vector2 direction = (player.position - transform.position).normalized;
         
-        // Move toward the player
-        rb.velocity = direction * speed;
+        // Move toward the player with increased speed
+        rb.velocity = direction * (baseSpeed * chaseSpeedMultiplier);
         
         // Clamp velocity
         if (rb.velocity.magnitude > maxSpeed) {
@@ -211,45 +242,40 @@ public class SharkEnemy : MonoBehaviour
         transform.rotation = Quaternion.Lerp(transform.rotation, Quaternion.Euler(0, 0, angle), steeringSensitivity * Time.deltaTime);
     }
     
-    void OnCollisionEnter2D(Collision2D collision) {
+    void OnTriggerEnter2D(Collider2D collision) {
         if (collision.gameObject.CompareTag("Player")) {
             // Play attack sound
             if (attackSound != null && audioSource != null) {
-                audioSource.clip = attackSound;
-                audioSource.Play();
+                audioSource.PlayOneShot(attackSound);
             }
             
             // Get the player's DiverMovement script
             DiverMovement diverMovement = collision.gameObject.GetComponent<DiverMovement>();
             if (diverMovement != null) {
-                // Call the player's death method if it exists
-                // This would need to be implemented in the DiverMovement script
-                // For example: diverMovement.OnDeath();
+                // Apply damage to player
+                diverMovement.TakeDamage(damage);
             }
-            
-            Debug.Log("Player killed by shark!");
         }
     }
     
-    // Visualize the chase range in the editor
+    // Visualize the detection range in the editor
     void OnDrawGizmosSelected() {
         Gizmos.color = Color.red;
         Gizmos.DrawWireSphere(transform.position, chaseRange);
         
         // Draw patrol path
-        if (patrolNodes != null && patrolNodes.Count > 0) {
-            Gizmos.color = Color.blue;
+        if (patrolNodes.Count > 0) {
+            Gizmos.color = Color.yellow;
             for (int i = 0; i < patrolNodes.Count; i++) {
                 if (patrolNodes[i] != null) {
                     Gizmos.DrawSphere(patrolNodes[i].position, 0.5f);
-                    if (i < patrolNodes.Count - 1 && patrolNodes[i+1] != null) {
-                        Gizmos.DrawLine(patrolNodes[i].position, patrolNodes[i+1].position);
+                    if (i < patrolNodes.Count - 1 && patrolNodes[i + 1] != null) {
+                        Gizmos.DrawLine(patrolNodes[i].position, patrolNodes[i + 1].position);
                     }
                 }
             }
-            // Connect last node to first node
-            if (patrolNodes.Count > 0 && patrolNodes[0] != null && patrolNodes[patrolNodes.Count-1] != null) {
-                Gizmos.DrawLine(patrolNodes[patrolNodes.Count-1].position, patrolNodes[0].position);
+            if (patrolNodes.Count > 0 && patrolNodes[0] != null) {
+                Gizmos.DrawLine(patrolNodes[patrolNodes.Count - 1].position, patrolNodes[0].position);
             }
         }
     }

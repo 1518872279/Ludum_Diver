@@ -480,14 +480,30 @@ The game features two types of enemies: Sharks and Jellyfish, each with unique b
 2. Add the following components:
    - Sprite Renderer
    - Rigidbody2D (set to Dynamic)
-   - Circle Collider 2D
+   - Circle Collider 2D (set to Trigger)
    - SharkEnemy script
 3. Configure the SharkEnemy settings:
-   - Detection Settings (chase range and return delay)
-   - Movement Settings (speed and steering)
-   - Patrol Settings (waypoints and wait times)
-   - Visual Effects (particle systems and light)
-   - Audio (detection and attack sounds)
+   - Detection Settings:
+     - Chase Range: Distance at which shark detects player (default: 10)
+     - Return Delay: Time before returning to patrol (default: 2)
+   - Movement Settings:
+     - Base Speed: Normal movement speed (default: 5)
+     - Chase Speed Multiplier: Speed increase when chasing (default: 1.5)
+     - Max Speed: Maximum movement speed (default: 8)
+     - Steering Sensitivity: Turn speed (default: 1.5)
+   - Patrol Settings:
+     - Patrol Nodes: List of waypoints for patrol path
+     - Patrol Wait Time: Time to wait at each node (default: 2)
+   - Attack Settings:
+     - Damage: Amount of damage dealt (default: 100)
+   - Visual Effects:
+     - Patrol Effect: Particle system for patrol state
+     - Chase Effect: Particle system for chase state
+     - Shark Light: Light component for visual feedback
+   - Audio:
+     - Detection Sound: Played when spotting player
+     - Attack Sound: Played when hitting player
+     - Ambient Sound: Continuous background sound
 4. Set up patrol waypoints:
    - Create empty GameObjects as child objects
    - Position them to form a patrol path
@@ -501,30 +517,60 @@ The game features two types of enemies: Sharks and Jellyfish, each with unique b
    - Circle Collider 2D (set to Trigger)
    - JellyfishEnemy script
 3. Configure the JellyfishEnemy settings:
-   - Detection Settings (range and return delay)
-   - Movement Settings (speed and steering)
-   - Attack Settings (duration and cooldown)
-   - Visual Effects (particle systems and light)
-   - Audio (detection and attack sounds)
+   - Jellyfish Type:
+     - Vertical: Moves up and down
+     - Horizontal: Moves left and right
+   - Movement Settings:
+     - Base Speed: Movement speed (default: 2)
+     - Max Speed: Maximum velocity (default: 5)
+     - Steering Sensitivity: Turn speed (default: 0.5)
+     - Movement Range: Distance from start position (default: 5)
+   - Attack Settings:
+     - Damage: Amount of damage dealt (default: 100)
+   - Visual Effects:
+     - Trail Effect: Particle system for movement
+     - Jellyfish Light: Light component with pulsing effect
+     - Light Pulse Speed: Speed of light pulsing (default: 1)
+     - Min/Max Light Intensity: Range of light pulsing
+   - Audio:
+     - Ambient Sound: Continuous background sound
+     - Hit Sound: Played when hitting player
+     - Ambient Volume: Volume of ambient sound (0-1)
 
 ### Enemy Behavior
 - **Sharks**:
   - Patrol between waypoints when player is out of range
   - Chase player when within detection range
-  - Instant kill on contact
+  - Deal instant kill damage on contact
   - Visual and audio feedback when detecting player
+  - Return to patrol after losing player
 - **Jellyfish**:
-  - Move randomly when idle
-  - Attack player when within range
-  - Deal damage over time on contact
-  - Visual and audio feedback for state changes
+  - Move in fixed patterns (vertical or horizontal)
+  - Deal instant kill damage on contact
+  - Visual feedback through pulsing light
+  - No active pursuit of player
 
 ### Enemy Placement
 1. Place enemies in strategic locations:
    - Sharks: Along patrol routes in open areas
-   - Jellyfish: Near obstacles or in tight spaces
+   - Vertical Jellyfish: In narrow passages
+   - Horizontal Jellyfish: In wide open areas
 2. Adjust detection ranges and movement speeds for balanced gameplay
 3. Test enemy behavior and adjust settings as needed
+
+### Damage System
+1. Player Health:
+   - Default max health: 100
+   - Enemies deal 100 damage (instant kill)
+   - Invulnerability period after taking damage
+2. Death Sequence:
+   - Visual effects play
+   - Audio feedback
+   - Scene reloads after delay
+3. Enemy Interactions:
+   - Sharks: Chase and attack
+   - Jellyfish: Passive movement, contact damage
+   - Both trigger instant death on contact
 
 ## Troubleshooting
 
@@ -548,6 +594,8 @@ The game features two types of enemies: Sharks and Jellyfish, each with unique b
    - If enemies are too aggressive, reduce their detection range or speed
    - If enemies get stuck, check their collider settings
    - If enemies don't detect the player, verify the player tag is set to "Player"
+   - If jellyfish movement is erratic, adjust the movement range and speed
+   - If shark patrol path is incorrect, check waypoint positions
 
 ### Performance Tips
 1. Use object pooling for frequently spawned objects

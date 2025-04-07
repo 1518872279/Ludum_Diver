@@ -2,264 +2,189 @@ using UnityEngine;
 using System.Collections;
 using UnityEngine.Rendering.Universal;
 
-public enum JellyfishState { Idle, Attack }
+public enum JellyfishType
+{
+    Vertical,
+    Horizontal
+}
 
 public class JellyfishEnemy : MonoBehaviour
 {
-    [Header("Detection Settings")]
-    [Tooltip("Range at which the jellyfish will detect and attack the player")]
-    public float detectionRange = 8f;
-    
-    [Tooltip("Time to wait before returning to idle after losing the player")]
-    public float returnToIdleDelay = 2f;
-    
+    [Header("Jellyfish Type")]
+    [Tooltip("Type of jellyfish movement pattern")]
+    public JellyfishType jellyfishType = JellyfishType.Vertical;
+
     [Header("Movement Settings")]
-    [Tooltip("Base movement speed of the jellyfish")]
-    public float baseSpeed = 3f;
+    [Tooltip("Base movement speed")]
+    public float baseSpeed = 2f;
     
-    [Tooltip("Attack speed multiplier")]
-    public float attackSpeedMultiplier = 1.5f;
+    [Tooltip("Maximum movement speed")]
+    public float maxSpeed = 5f;
     
-    [Tooltip("Maximum speed the jellyfish can move at")]
-    public float maxSpeed = 6f;
+    [Tooltip("Steering sensitivity for movement")]
+    public float steeringSensitivity = 0.5f;
     
-    [Tooltip("How quickly the jellyfish turns toward its target")]
-    public float steeringSensitivity = 1.5f;
-    
+    [Tooltip("Movement range from starting position")]
+    public float movementRange = 5f;
+
     [Header("Attack Settings")]
-    [Tooltip("Duration of the attack")]
-    public float attackDuration = 2f;
-    
-    [Tooltip("Cooldown between attacks")]
-    public float attackCooldown = 5f;
-    
     [Tooltip("Damage dealt to player on contact")]
-    public int damage = 10;
-    
+    public int damage = 100; // Instant kill damage
+
     [Header("Visual Effects")]
-    [Tooltip("Particle system for idle state")]
-    public ParticleSystem idleEffect;
+    [Tooltip("Particle system for movement trail")]
+    public ParticleSystem trailEffect;
     
-    [Tooltip("Particle system for attack state")]
-    public ParticleSystem attackEffect;
-    
-    [Tooltip("Light for the jellyfish")]
+    [Tooltip("Light component for the jellyfish")]
     public Light2D jellyfishLight;
     
+    [Tooltip("Pulse speed of the light")]
+    public float lightPulseSpeed = 1f;
+    
+    [Tooltip("Minimum light intensity")]
+    public float minLightIntensity = 0.5f;
+    
+    [Tooltip("Maximum light intensity")]
+    public float maxLightIntensity = 1.5f;
+
     [Header("Audio")]
-    [Tooltip("Sound when jellyfish detects player")]
-    public AudioClip detectionSound;
-    
-    [Tooltip("Sound when jellyfish attacks")]
-    public AudioClip attackSound;
-    
-    [Tooltip("Ambient sound for jellyfish")]
+    [Tooltip("Ambient sound for the jellyfish")]
     public AudioClip ambientSound;
     
-    private JellyfishState currentState = JellyfishState.Idle;
-    private Transform player;
-    private float returnToIdleTimer = 0f;
-    private bool isAttacking = false;
-    private float attackTimer = 0f;
-    private float cooldownTimer = 0f;
-    private AudioSource audioSource;
-    private Rigidbody2D rb;
-    private Vector2 randomDirection;
-    private float directionChangeTimer = 0f;
-    private float directionChangeInterval = 3f;
+    [Tooltip("Sound when hitting player")]
+    public AudioClip hitSound;
     
-    void Start() {
-        // Find the player
-        player = GameObject.FindGameObjectWithTag("Player")?.transform;
-        if (player == null) {
-            Debug.LogWarning("JellyfishEnemy: Player not found with tag 'Player'");
+    [Tooltip("Volume of the ambient sound")]
+    [Range(0f, 1f)]
+    public float ambientVolume = 0.3f;
+
+    private Rigidbody2D rb;
+    private Vector2 startPosition;
+    private float movementTimer = 0f;
+    private AudioSource audioSource;
+    private float initialLightIntensity;
+
+    private void Start()
+    {
+        rb = GetComponent<Rigidbody2D>();
+        if (rb == null)
+        {
+            Debug.LogError("JellyfishEnemy requires a Rigidbody2D component!");
+            enabled = false;
+            return;
         }
+
+        // Store initial position
+        startPosition = transform.position;
         
         // Get or add components
-        rb = GetComponent<Rigidbody2D>();
-        if (rb == null) {
-            rb = gameObject.AddComponent<Rigidbody2D>();
-            rb.gravityScale = 0f;
-            rb.drag = 1.5f;
-        }
-        
         audioSource = GetComponent<AudioSource>();
         if (audioSource == null) {
             audioSource = gameObject.AddComponent<AudioSource>();
         }
         
-        // Play ambient sound
-        if (ambientSound != null && audioSource != null) {
+        // Set up audio
+        if (ambientSound != null) {
             audioSource.clip = ambientSound;
             audioSource.loop = true;
+            audioSource.volume = ambientVolume;
             audioSource.Play();
         }
         
-        // Initialize random direction
-        randomDirection = Random.insideUnitCircle.normalized;
-        
-        // Start idle effects
-        if (idleEffect != null) {
-            idleEffect.Play();
+        // Store initial light intensity
+        if (jellyfishLight != null) {
+            initialLightIntensity = jellyfishLight.intensity;
         }
     }
-    
-    void Update() {
-        if (player == null) return;
+
+    private void Update()
+    {
+        // Update movement timer
+        movementTimer += Time.deltaTime;
         
-        float distanceToPlayer = Vector2.Distance(transform.position, player.position);
-        
-        // Update timers
-        if (isAttacking) {
-            attackTimer += Time.deltaTime;
-            if (attackTimer >= attackDuration) {
-                isAttacking = false;
-                attackTimer = 0f;
-                cooldownTimer = 0f;
-            }
-        } else if (cooldownTimer < attackCooldown) {
-            cooldownTimer += Time.deltaTime;
-        }
-        
-        // State management
-        switch (currentState) {
-            case JellyfishState.Idle:
-                // Check if player is in range to attack
-                if (distanceToPlayer <= detectionRange && cooldownTimer >= attackCooldown) {
-                    TransitionToAttack();
-                } else {
-                    IdleMovement();
-                }
-                break;
-                
-            case JellyfishState.Attack:
-                // Check if player is out of range
-                if (distanceToPlayer > detectionRange) {
-                    returnToIdleTimer += Time.deltaTime;
-                    if (returnToIdleTimer >= returnToIdleDelay) {
-                        TransitionToIdle();
-                    } else {
-                        // Continue attacking for a bit after losing the player
-                        AttackMovement();
-                    }
-                } else {
-                    // Reset return timer when player is in range
-                    returnToIdleTimer = 0f;
-                    AttackMovement();
-                }
-                break;
+        // Pulse the light
+        if (jellyfishLight != null) {
+            float pulse = Mathf.PingPong(Time.time * lightPulseSpeed, 1f);
+            jellyfishLight.intensity = Mathf.Lerp(minLightIntensity, maxLightIntensity, pulse);
         }
     }
-    
-    void TransitionToAttack() {
-        if (currentState != JellyfishState.Attack) {
-            currentState = JellyfishState.Attack;
-            isAttacking = true;
-            attackTimer = 0f;
-            
-            // Play detection sound
-            if (detectionSound != null && audioSource != null) {
-                audioSource.PlayOneShot(detectionSound);
-            }
-            
-            // Switch effects
-            if (idleEffect != null) {
-                idleEffect.Stop();
-            }
-            if (attackEffect != null) {
-                attackEffect.Play();
-            }
-            
-            // Adjust light
-            if (jellyfishLight != null) {
-                jellyfishLight.intensity = 1.8f;
-                jellyfishLight.color = new Color(0.5f, 0.3f, 1f);
-            }
-        }
+
+    private void FixedUpdate()
+    {
+        MoveJellyfish();
     }
-    
-    void TransitionToIdle() {
-        if (currentState != JellyfishState.Idle) {
-            currentState = JellyfishState.Idle;
-            
-            // Switch effects
-            if (attackEffect != null) {
-                attackEffect.Stop();
-            }
-            if (idleEffect != null) {
-                idleEffect.Play();
-            }
-            
-            // Reset light
-            if (jellyfishLight != null) {
-                jellyfishLight.intensity = 1f;
-                jellyfishLight.color = new Color(0.7f, 0.5f, 1f);
-            }
-        }
-    }
-    
-    void IdleMovement() {
-        // Change direction periodically
-        directionChangeTimer += Time.deltaTime;
-        if (directionChangeTimer >= directionChangeInterval) {
-            randomDirection = Random.insideUnitCircle.normalized;
-            directionChangeTimer = 0f;
-        }
+
+    private void MoveJellyfish()
+    {
+        // Calculate target position based on jellyfish type
+        Vector2 targetPosition = startPosition;
+        float offset = Mathf.Sin(movementTimer * baseSpeed) * movementRange;
         
-        // Apply movement
-        rb.velocity = randomDirection * baseSpeed;
+        if (jellyfishType == JellyfishType.Vertical)
+        {
+            targetPosition.y += offset;
+        }
+        else // Horizontal
+        {
+            targetPosition.x += offset;
+        }
+
+        // Calculate direction to target
+        Vector2 direction = (targetPosition - (Vector2)transform.position).normalized;
+        
+        // Apply movement force
+        Vector2 force = direction * baseSpeed;
+        rb.AddForce(force, ForceMode2D.Force);
         
         // Clamp velocity
-        if (rb.velocity.magnitude > maxSpeed) {
+        if (rb.velocity.magnitude > maxSpeed)
+        {
             rb.velocity = rb.velocity.normalized * maxSpeed;
         }
         
-        // Smoothly rotate towards movement direction
-        float angle = Mathf.Atan2(rb.velocity.y, rb.velocity.x) * Mathf.Rad2Deg;
-        transform.rotation = Quaternion.Lerp(transform.rotation, Quaternion.Euler(0, 0, angle), steeringSensitivity * Time.deltaTime);
-    }
-    
-    void AttackMovement() {
-        if (player == null) return;
-        
-        // Calculate direction to player
-        Vector2 direction = (player.position - transform.position).normalized;
-        
-        // Move toward the player with increased speed
-        rb.velocity = direction * (baseSpeed * attackSpeedMultiplier);
-        
-        // Clamp velocity
-        if (rb.velocity.magnitude > maxSpeed) {
-            rb.velocity = rb.velocity.normalized * maxSpeed;
-        }
-        
-        // Smoothly rotate towards the player
+        // Rotate to face movement direction
         float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
-        transform.rotation = Quaternion.Lerp(transform.rotation, Quaternion.Euler(0, 0, angle), steeringSensitivity * Time.deltaTime);
+        float currentRotation = transform.eulerAngles.z;
+        float newRotation = Mathf.LerpAngle(currentRotation, angle, steeringSensitivity * Time.fixedDeltaTime);
+        transform.rotation = Quaternion.Euler(0f, 0f, newRotation);
     }
-    
-    void OnTriggerEnter2D(Collider2D collision) {
-        if (collision.gameObject.CompareTag("Player")) {
-            // Play attack sound
-            if (attackSound != null && audioSource != null) {
-                audioSource.PlayOneShot(attackSound);
+
+    private void OnTriggerEnter2D(Collider2D other)
+    {
+        if (other.CompareTag("Player"))
+        {
+            // Play hit sound
+            if (hitSound != null && audioSource != null) {
+                audioSource.PlayOneShot(hitSound);
             }
             
-            // Get the player's DiverMovement script
-            DiverMovement diverMovement = collision.gameObject.GetComponent<DiverMovement>();
-            if (diverMovement != null) {
+            // Get the player's DiverMovement component
+            DiverMovement player = other.GetComponent<DiverMovement>();
+            if (player != null)
+            {
                 // Apply damage to player
-                // This would need to be implemented in the DiverMovement script
-                // For example: diverMovement.TakeDamage(damage);
+                player.TakeDamage(damage);
             }
-            
-            Debug.Log("Player hit by jellyfish!");
         }
     }
-    
-    // Visualize the detection range in the editor
-    void OnDrawGizmosSelected() {
-        Gizmos.color = Color.magenta;
-        Gizmos.DrawWireSphere(transform.position, detectionRange);
+
+    private void OnDrawGizmos()
+    {
+        // Draw movement range
+        Gizmos.color = Color.cyan;
+        if (jellyfishType == JellyfishType.Vertical)
+        {
+            Gizmos.DrawLine(
+                transform.position + Vector3.up * movementRange,
+                transform.position + Vector3.down * movementRange
+            );
+        }
+        else
+        {
+            Gizmos.DrawLine(
+                transform.position + Vector3.right * movementRange,
+                transform.position + Vector3.left * movementRange
+            );
+        }
     }
 } 
