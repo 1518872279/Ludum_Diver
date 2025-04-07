@@ -134,7 +134,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c2ae8a7dc7295754abe5f8969b8fec2e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  dragForce: 10
+  dragForce: 5
   circularForce: 5
   maxForce: 15
   whirlpoolEffect: {fileID: 0}
