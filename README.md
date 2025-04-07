@@ -572,6 +572,152 @@ The game features two types of enemies: Sharks and Jellyfish, each with unique b
    - Jellyfish: Passive movement, contact damage
    - Both trigger instant death on contact
 
+## Trap System
+
+The game features three types of traps: Whirlpools, Undercurrents, and Sharp Rocks, each with unique behaviors and effects on the player.
+
+### Whirlpool Trap Setup
+1. Create a new GameObject and name it "Whirlpool"
+2. Add the following components:
+   - Sprite Renderer (for visual representation)
+   - Circle Collider 2D (set to Trigger)
+   - WhirlpoolTrap script
+   - Light2D (for visual feedback)
+   - Particle System (for whirlpool effect)
+3. Configure the WhirlpoolTrap settings:
+   - Force Settings:
+     - Drag Force: Force pulling player to center (default: 10)
+     - Circular Force: Force creating spinning motion (default: 5)
+     - Max Force: Maximum combined force (default: 15)
+   - Visual Effects:
+     - Whirlpool Effect: Particle system for visual feedback
+     - Whirlpool Light: Light component with pulsing effect
+     - Light Pulse Speed: Speed of light pulsing (default: 1.5)
+     - Min/Max Light Intensity: Range of light pulsing
+   - Audio:
+     - Ambient Sound: Continuous background sound
+     - Ambient Volume: Volume of ambient sound (0-1)
+
+### Undercurrent Trap Setup
+1. Create a new GameObject and name it "Undercurrent"
+2. Add the following components:
+   - Sprite Renderer (for visual representation)
+   - Box Collider 2D (set to Trigger)
+   - UndercurrentTrap script
+   - Light2D (for visual feedback)
+   - Particle System (for current effect)
+3. Configure the UndercurrentTrap settings:
+   - Force Settings:
+     - Current Force: Force applied in current direction (default: 8)
+     - Max Force: Maximum force that can be applied (default: 12)
+     - Current Direction: Direction of the undercurrent in degrees (default: 0)
+   - Visual Effects:
+     - Current Effect: Particle system for visual feedback
+     - Current Light: Light component with blue tint
+     - Current Light Color: Color of the light (default: blue)
+   - Audio:
+     - Ambient Sound: Continuous background sound
+     - Ambient Volume: Volume of ambient sound (0-1)
+
+### Sharp Rocks Trap Setup
+1. Create a new GameObject and name it "SharpRocks"
+2. Add the following components:
+   - Sprite Renderer (for visual representation)
+   - Polygon Collider 2D (set to Trigger)
+   - SharpRocksTrap script
+   - Light2D (for visual feedback)
+   - Particle System (for hit effect)
+3. Configure the SharpRocksTrap settings:
+   - Damage Settings:
+     - Damage: Amount of damage dealt (default: 25)
+     - Damage Interval: Time between damage ticks (default: 0.5)
+   - Visual Effects:
+     - Hit Effect: Particle system for when player hits rocks
+     - Rocks Light: Light component with red tint
+     - Rocks Light Color: Color of the light (default: red)
+   - Audio:
+     - Hit Sound: Sound played when player hits rocks
+     - Hit Volume: Volume of hit sound (0-1)
+
+### Trap Behavior
+- **Whirlpools**:
+  - Pull players toward the center
+  - Create circular spinning motion
+  - Visual feedback with pulsing light and particles
+  - Audio feedback with ambient sound
+- **Undercurrents**:
+  - Push players in a specific direction
+  - Visual feedback with blue light and particles
+  - Audio feedback with ambient sound
+- **Sharp Rocks**:
+  - Deal damage to players on contact
+  - Deal continuous damage while player remains in contact
+  - Visual feedback with red light and hit particles
+  - Audio feedback with hit sound
+
+### Trap Interaction with Player
+1. All traps interact with the player's Rigidbody2D:
+   - Whirlpools and Undercurrents apply forces
+   - Sharp Rocks trigger the TakeDamage method
+2. Visual and audio feedback enhance the player experience
+3. Traps can be combined to create more complex challenges
+
+### Trap Troubleshooting
+1. **Whirlpool Issues**:
+   - If the whirlpool doesn't affect the player:
+     - Ensure the player has the "Player" tag
+     - Check that the CircleCollider2D is set to "Is Trigger"
+     - Verify the whirlpool has a Rigidbody2D (can be kinematic)
+     - Increase the dragForce and circularForce values
+     - Check the console for "Player entered whirlpool" messages
+   - If the whirlpool effect is too strong/weak:
+     - Adjust the dragForce and circularForce values
+     - Modify the maxForce to limit the total effect
+   - If visual effects aren't working:
+     - Ensure the particle system is assigned
+     - Check that the Light2D component is properly configured
+
+2. **Undercurrent Issues**:
+   - If the undercurrent doesn't push the player:
+     - Ensure the player has the "Player" tag
+     - Check that the BoxCollider2D is set to "Is Trigger"
+     - Verify the currentDirection is set correctly (0 = right, 90 = up)
+     - Increase the currentForce value
+     - Check the console for "Player entered undercurrent" messages
+   - If the undercurrent effect is too strong/weak:
+     - Adjust the currentForce value
+     - Modify the maxForce to limit the total effect
+   - If visual effects aren't working:
+     - Ensure the particle system is assigned
+     - Check that the Light2D component is properly configured
+
+3. **Sharp Rocks Issues**:
+   - If the rocks don't damage the player:
+     - Ensure the player has the "Player" tag
+     - Check that the PolygonCollider2D is set to "Is Trigger"
+     - Verify the damage value is greater than 0
+     - Check the console for "Player entered sharp rocks" messages
+   - If the damage is too high/low:
+     - Adjust the damage value
+     - Modify the damageInterval to change how frequently damage is applied
+   - If visual effects aren't working:
+     - Ensure the particle system is assigned
+     - Check that the Light2D component is properly configured
+
+4. **General Trap Issues**:
+   - If traps don't appear in the scene:
+     - Ensure the trap prefabs are properly set up
+     - Check that all required components are attached
+     - Verify the trap scripts are enabled
+   - If traps cause performance issues:
+     - Reduce particle effect complexity
+     - Lower the light intensity
+     - Simplify collider shapes
+   - If traps don't work with the procedural generation:
+     - Ensure traps are properly tagged
+     - Check that the ProceduralMapGenerator includes traps in its spawn settings
+     - Verify trap prefabs are assigned to the generator
+
 ## Troubleshooting
 
 ### Common Issues
