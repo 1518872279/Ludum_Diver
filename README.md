@@ -301,4 +301,172 @@ The system automatically manages chunks based on the player's position:
    - Adjust the Smooth Speed for faster/slower following
    - Modify the Look Ahead Factor for better anticipation
    - Check if the Max Follow Distance is appropriate
-   - Verify the camera offset is set correctly 
+   - Verify the camera offset is set correctly
+
+## Deep Sea Cavern Generator
+
+The Deep Sea Cavern Generator creates a branching cavern system with a single entry point, multiple paths, and various room types. This system provides a more structured and exploration-focused environment compared to the infinite procedural generation.
+
+### 1. Set Up the Cavern Generator
+
+1. Create an empty GameObject in your scene named "CavernGenerator"
+2. Add the CavernGenerator script component
+3. Configure the generation settings:
+   ```csharp
+   Generation Settings:
+   - Max Depth: Maximum depth of the cavern (default: 5)
+   - Max Branches: Maximum number of branches per node (default: 3)
+   - Room Spacing: Distance between rooms (default: 10)
+   - Player Spawn Point: Transform for player spawning
+   
+   Room Prefabs:
+   - Normal Room Prefab: Prefab for standard rooms
+   - Deadend Room Prefab: Prefab for deadend rooms
+   - Treasure Room Prefab: Prefab for treasure rooms
+   - Exit Room Prefab: Prefab for exit rooms
+   
+   Obstacle Settings:
+   - Obstacle Prefabs: Array of obstacle prefabs
+   - Obstacle Spawn Chance: Probability of spawning obstacles (0-1)
+   - Max Obstacles Per Room: Maximum obstacles per room
+   
+   Portal Settings:
+   - Portal Prefab: Prefab for portals
+   - Portal Spawn Chance: Probability of spawning portals (0-1)
+   - Max Portals Per Room: Maximum portals per room
+   
+   Collectible Settings:
+   - Collectible Prefabs: Array of collectible prefabs
+   - Collectible Spawn Chance: Probability of spawning collectibles (0-1)
+   - Max Collectibles Per Room: Maximum collectibles per room
+   ```
+
+### 2. Create Room Prefabs
+
+1. Create prefabs for each room type:
+   - Normal Room: Standard passage
+   - Deadend Room: Terminal room with no further paths
+   - Treasure Room: Room containing valuable items
+   - Exit Room: The goal room for the player
+
+2. Add the RoomController script to each room prefab
+3. Configure room-specific settings:
+   - Visual indicators for room type
+   - Particle effects for special rooms
+   - Room lighting
+   - Connection points for other rooms
+
+### 3. Create Portal Prefab
+
+1. Create a portal prefab with:
+   - Visual representation (sprite, particles)
+   - Collider2D (set as trigger)
+   - Portal script
+   - Audio source for effects
+
+2. Configure portal settings:
+   - Activation interval and duration
+   - Monster spawn chance
+   - Visual and audio effects
+   - Monster prefabs and spawn point
+
+### 4. Cavern Structure
+
+The cavern is generated using a graph-based approach:
+- Single entry point at the top
+- Branches extend downward with random horizontal variation
+- Each branch can be a normal room, deadend, treasure room, or exit
+- At least one exit is guaranteed to exist
+- Obstacles, portals, and collectibles are placed within rooms
+
+### 5. Room Types
+
+1. **Normal Rooms:**
+   - Standard passage with possible branching
+   - Contains basic obstacles and collectibles
+   - Neutral lighting
+
+2. **Deadend Rooms:**
+   - Terminal room with no further paths
+   - Often contains valuable collectibles
+   - Slightly darker lighting with red tint
+
+3. **Treasure Rooms:**
+   - Contains valuable items and collectibles
+   - May have more challenging obstacles
+   - Brighter lighting with golden tint
+   - Special particle effects
+
+4. **Exit Rooms:**
+   - The goal room for the player
+   - Usually at the end of a branch
+   - Bright lighting with green tint
+   - Special particle effects
+
+### 6. Portals
+
+Portals are special objects that:
+- Activate periodically
+- Have a chance to spawn monsters
+- Apply environmental hazards to the player
+- Provide visual and audio feedback
+
+### 7. Visual Debugging
+
+The CavernGenerator includes visual debugging tools:
+- Node visualization in the Scene view
+- Color-coded nodes based on room type
+- Connection lines between rooms
+- Room boundaries visualization
+
+### 8. Tips for Cavern Design
+
+1. **Room Layout:**
+   - Create varied room shapes and sizes
+   - Ensure rooms have clear pathways
+   - Add visual cues for room types
+   - Include connection points for branching
+
+2. **Obstacle Placement:**
+   - Place obstacles to create interesting paths
+   - Ensure obstacles don't completely block progress
+   - Vary obstacle types and patterns
+   - Consider the diver's movement capabilities
+
+3. **Portal Design:**
+   - Make portals visually distinct
+   - Create clear activation/deactivation states
+   - Balance monster spawn frequency
+   - Design appropriate environmental hazards
+
+4. **Collectible Distribution:**
+   - Place valuable collectibles in risk/reward positions
+   - Increase collectible value in harder-to-reach rooms
+   - Use collectibles to guide player exploration
+   - Balance collectible distribution across room types
+
+### 9. Troubleshooting Cavern Generation
+
+1. If rooms aren't connecting properly:
+   - Check connection points are properly set up
+   - Verify room spacing is appropriate
+   - Ensure room prefabs have correct colliders
+   - Check for overlapping rooms
+
+2. If generation feels too repetitive:
+   - Increase the number of room prefab variations
+   - Adjust branching parameters
+   - Add more variety to obstacle and collectible placement
+   - Modify room type distribution
+
+3. If performance is poor:
+   - Reduce maximum depth and branches
+   - Simplify room prefabs
+   - Optimize particle effects
+   - Reduce the number of objects per room
+
+4. If player can't find the exit:
+   - Increase the chance of exit rooms
+   - Add visual indicators for exit direction
+   - Ensure exit rooms are visually distinct
+   - Consider adding a minimap or compass 
