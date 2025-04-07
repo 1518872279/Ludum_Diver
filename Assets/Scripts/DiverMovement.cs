@@ -71,6 +71,22 @@ public class DiverMovement : MonoBehaviour
     [Tooltip("Delay before respawning at checkpoint (in seconds)")]
     public float respawnDelay = 3f;
     
+    [Header("Unstuck Settings")]
+    [Tooltip("Key to press to get unstuck (teleport to last checkpoint)")]
+    public KeyCode unstuckKey = KeyCode.F;
+    
+    [Tooltip("Cooldown time between unstuck attempts (in seconds)")]
+    public float unstuckCooldown = 5f;
+    
+    [Tooltip("Whether to show a message when the player gets unstuck")]
+    public bool showUnstuckMessage = true;
+    
+    [Tooltip("Message to display when the player gets unstuck")]
+    public string unstuckMessage = "Teleported to last checkpoint";
+    
+    [Tooltip("Duration to display the unstuck message (in seconds)")]
+    public float unstuckMessageDuration = 3f;
+    
     private Rigidbody2D rb;
     private bool isLeftFlipperActive;
     private bool isRightFlipperActive;
@@ -83,6 +99,7 @@ public class DiverMovement : MonoBehaviour
     private SpriteRenderer spriteRenderer;
     private bool wasLeftFlipperActive;
     private bool wasRightFlipperActive;
+    private float unstuckCooldownTimer = 0f;
 
     private void Start()
     {
@@ -157,6 +174,18 @@ public class DiverMovement : MonoBehaviour
         if (Input.GetMouseButtonUp(1))
         {
             isRightFlipperActive = false;
+        }
+        
+        // Check for unstuck input
+        if (Input.GetKeyDown(unstuckKey) && unstuckCooldownTimer <= 0f)
+        {
+            GetUnstuck();
+        }
+        
+        // Update unstuck cooldown
+        if (unstuckCooldownTimer > 0f)
+        {
+            unstuckCooldownTimer -= Time.deltaTime;
         }
         
         // Update animations
@@ -429,5 +458,53 @@ public class DiverMovement : MonoBehaviour
     {
         Gizmos.color = Color.blue;
         Gizmos.DrawLine(transform.position, transform.position + transform.up);
+    }
+
+    // Get unstuck by teleporting to the last checkpoint
+    public void GetUnstuck()
+    {
+        // Check if GameManager exists and has a checkpoint
+        if (GameManager.Instance != null && GameManager.Instance.HasCheckpoint())
+        {
+            // Get the checkpoint position
+            Vector2 checkpointPosition = GameManager.Instance.GetCheckpointPosition();
+            
+            // Teleport the player
+            transform.position = checkpointPosition;
+            
+            // Reset velocity
+            if (rb != null)
+            {
+                rb.velocity = Vector2.zero;
+                rb.angularVelocity = 0f;
+            }
+            
+            // Start cooldown
+            unstuckCooldownTimer = unstuckCooldown;
+            
+            // Show message if enabled
+            if (showUnstuckMessage)
+            {
+                Debug.Log(unstuckMessage);
+                
+                // Use NotificationManager if available
+                if (NotificationManager.Instance != null)
+                {
+                    NotificationManager.Instance.ShowNotification(unstuckMessage, unstuckMessageDuration);
+                }
+            }
+            
+            Debug.Log("Player teleported to checkpoint: " + checkpointPosition);
+        }
+        else
+        {
+            Debug.LogWarning("No checkpoint available to teleport to!");
+            
+            // Show error message if NotificationManager is available
+            if (NotificationManager.Instance != null)
+            {
+                NotificationManager.Instance.ShowNotification("No checkpoint available!", 2f);
+            }
+        }
     }
 } 
